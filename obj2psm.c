@@ -14,6 +14,7 @@ void setVert(const char* line); // Sets the given coordinates as the vertice in 
 MAT materials[255] = { 0,0 };
 short indexes[4] = {0,0,0,0};
 MODEL model = { 0 };
+int fidelity = 4096;
 
 int main()
 {
@@ -105,5 +106,19 @@ void setMatDiffuse(const char* line) {
 }
 
 void setVert(const char* line) {
+    const char delim[2] = " ";
+    char* token;
+    float verts[3];
+    int conv[3];
 
+    token = strtok(line, delim);
+
+    for (int i = 0; i < 3; i++) {
+        token = strtok(NULL, delim);
+        verts[i] = atof(token);
+        conv[i] = (int)(verts[i] * fidelity);
+    }
+
+    model.vIndex[indexes[0]] = (VECTOR){ conv[0],conv[1],conv[2] };
+    indexes[0]++;
 }
