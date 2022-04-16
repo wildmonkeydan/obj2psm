@@ -10,6 +10,9 @@ void readMtl(const char* filename); // Reads the .mtl file and loads in simple d
 void setMatName(const char* line); // Sets the reference name of the material, so when the .obj references it, it can be pushed to an index for use at PS runtime
 void setMatDiffuse(const char* line); // Sets the colour of that material, so setRGB0() can be used on the poly tied to the material
 void setVert(const char* line); // Sets the given coordinates as the vertice in the current index
+void setUV(const char* line); // Sets the given texcoords as the next index, rounded to fit into a texpage (256*256 16-bit px)
+void setNorm(const char* line); // Sets the given coordinates as the normal of the current index
+void setFace(const char* line); // Sets the given face info as the current face index (dependant on wether face is textured)
 
 MAT materials[255] = { 0,0 };
 short indexes[4] = {0,0,0,0};
@@ -121,4 +124,69 @@ void setVert(const char* line) {
 
     model.vIndex[indexes[0]] = (VECTOR){ conv[0],conv[1],conv[2] };
     indexes[0]++;
+}
+
+void setUV(const char* line) {
+    const char delim[2] = " ";
+    char* token;
+    float raw[2];
+    uint8_t conv[2];
+
+    token = strtok(line, delim);
+
+    for (int i = 0; i < 2; i++) {
+        token = strtok(NULL, delim);
+        raw[i] = atof(token);
+        conv[i] = (uint8_t)(raw[i] * 255);
+    }
+    model.uvIndex->u = conv[0];
+    model.uvIndex->v = conv[1];
+    indexes[3]++;
+}
+
+void setNorm(const char* line) {
+    const char delim[2] = " ";
+    char* token;
+    float raw[3];
+    int conv[3];
+
+    token = strtok(line, delim);
+
+    for (int i = 0; i < 3; i++) {
+        token = strtok(NULL, delim);
+        raw[i] = atof(token);
+        conv[i] = (int)(raw[i] * 4098);
+    }
+    model.nIndex[indexes[1]] = (VECTOR){ conv[0],conv[1],conv[2] };
+    indexes[1];
+}
+
+void setFace(const char* line) {
+    const char delim[2] = " ";
+    const char slash[2] = "/";
+    char* token;
+    char* infoone;
+    char* infotwo;
+    char* infothree;
+    int raw[3];
+    FTRI untex;
+    FTTRI tex;
+
+    token = strtok(line, delim);
+
+    infoone = strtok(NULL, delim);
+    infotwo = strtok(NULL, delim);
+    infothree = strtok(NULL, delim);
+
+    token = strtok(infoone, slash);
+    raw[0] = atoi(token);
+
+    for (int i = 0; i < 2; i++) {
+        token = strtok(NULL, slash);
+        raw[i++] = atoi(token);
+    }
+
+    if (raw[1] == 0) {
+
+    }
 }
