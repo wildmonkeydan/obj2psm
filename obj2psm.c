@@ -3,19 +3,23 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include "defines.h"
 
 void readMtl(const char* filename); // Reads the .mtl file and loads in simple diffuse materials to be used on untextured polys
+void readObj(const char* filename); // Reads the .obj file and loads in poly, UV, and normal data
 void setMatName(const char* line); // Sets the reference name of the material, so when the .obj references it, it can be pushed to an index for use at PS runtime
 void setMatDiffuse(const char* line); // Sets the colour of that material, so setRGB0() can be used on the poly tied to the material
 void setVert(const char* line); // Sets the given coordinates as the vertice in the current index
 void setUV(const char* line); // Sets the given texcoords as the next index, rounded to fit into a texpage (256*256 16-bit px)
 void setNorm(const char* line); // Sets the given coordinates as the normal of the current index
 void setFace(const char* line); // Sets the given face info as the current face index (dependant on wether face is textured)
+void setCurrentMat(const char* line); // Sets the given material name to be applied to upcoming untextured faces
 
 MAT materials[255] = { 0,0 };
-short indexes[4] = {0,0,0,0};
+uint8_t currentMat = 0;
+short indexes[6] = {0,0,0,0,0,0};
 MODEL model = { 0 };
 int fidelity = 4096;
 
@@ -77,6 +81,40 @@ void readMtl(const char* filename) {
         }
     }
     fclose(mtlFile);
+}
+
+void readObj(const char* filename) {
+    FILE* objFile = fopen(filename, "r");
+    int bufferLength = 255;
+
+    char buffer[255];
+
+    if (objFile == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    while (fgets(buffer, bufferLength, objFile)) {
+        switch (buffer[0]) { //Check the first letter of each line
+        case 'v': //Looking for vertex-related info
+            if (buffer[1] == ' ') {
+                setVert(buffer);
+            }
+            if (buffer[1] == 't') {
+                setUV(buffer);
+            }
+            if (buffer[1] == 'n') {
+                setNorm(buffer);
+            }
+            break;
+        case 'K': //Looking for diffuse info
+            if (buffer[1] == 'd') {
+                setMatDiffuse(buffer);
+            }
+        default:
+            continue;
+        }
+    }
+    fclose(objFile);
 }
 
 void setMatName(const char* line) {
@@ -168,6 +206,7 @@ void setFace(const char* line) {
     char* infoone;
     char* infotwo;
     char* infothree;
+    bool isFlat = false;
     int raw[3];
     FTRI untex;
     FTTRI tex;
@@ -178,6 +217,8 @@ void setFace(const char* line) {
     infotwo = strtok(NULL, delim);
     infothree = strtok(NULL, delim);
 
+
+
     token = strtok(infoone, slash);
     raw[0] = atoi(token);
 
@@ -187,6 +228,96 @@ void setFace(const char* line) {
     }
 
     if (raw[1] == 0) {
+        isFlat = true;
+    }
 
+    if (isFlat) {
+        untex.v[0] = raw[0]--;
+        untex.mat = currentMat;
+        untex.n = raw[2]--;
+    }
+    else {
+        tex.v[0] = raw[0]--;
+        tex.t[0] = raw[1]--;
+        tex.n = raw[2]--;
+    }
+
+
+
+    token = strtok(infotwo, slash);
+    raw[0] = atoi(token);
+
+    for (int i = 0; i < 2; i++) {
+        token = strtok(NULL, slash);
+        raw[i++] = atoi(token);
+    }
+
+    if (raw[1] == 0) {
+        isFlat = true;
+    }
+
+    if (isFlat) {
+        untex.v[1] = raw[0]--;
+        untex.mat = currentMat;
+        untex.n = raw[2]--;
+    }
+    else {
+        tex.v[1] = raw[0]--;
+        tex.t[1] = raw[1]--;
+        tex.n = raw[2]--;
+    }
+
+
+
+    token = strtok(infothree, slash);
+    raw[0] = atoi(token);
+
+    for (int i = 0; i < 2; i++) {
+        token = strtok(NULL, slash);
+        raw[i++] = atoi(token);
+    }
+
+    if (raw[1] == 0) {
+        isFlat = true;
+    }
+
+    if (isFlat) {
+        untex.v[2] = raw[0]--;
+        untex.mat = currentMat;
+        untex.n = raw[2]--;
+    }
+    else {
+        tex.v[2] = raw[0]--;
+        tex.t[2] = raw[1]--;
+        tex.n = raw[2]--;
+    }
+
+    if (isFlat) {
+        model.untexFaces[indexes[4]] = untex;
+    }
+    else {
+        model.texFaces[indexes[5]] = tex;
+    }
+}
+
+void setCurrentMat(const char* line) {
+    const char delim[2] = " ";
+    char* token;
+    bool done = false;
+    int counter = 0;
+
+    token = strtok(line, delim);
+    token = strtok(NULL, delim);
+
+    while (done == false) {
+        
+        if (materials[counter].name == token) {
+            currentMat = counter;
+            done = true;
+        }
+        if (counter = 255) {
+            done = true;
+        }
+        counter++;
     }
 }
