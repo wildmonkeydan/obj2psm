@@ -18,6 +18,7 @@ void setFace(const char* line); // Sets the given face info as the current face 
 void setCurrentMat(const char* line); // Sets the given material name to be applied to upcoming untextured faces
 void saveModel(const char* filename); // Saves the loaded model as a .psm
 void assembleModel(); // Assembles all the data needed in the model
+void initModel(); // Initalizes model with a cap of 4,000 polys of each type
 
 MAT materials[255] = { 0,0 };
 uint8_t currentMat = 0;
@@ -31,6 +32,8 @@ int main()
     char buffer[255];
     char filename[255];
     char tempFilename[255];
+
+    initModel();
 
     printf("Type in the filename without extension: ");
     int e = scanf("%s", filename);
@@ -59,6 +62,11 @@ int main()
     strcpy(tempFilename, filename);
     strcat(tempFilename, ".psm");
     saveModel(tempFilename);
+
+    printf("\nModel Info:\nUntextured tris: %d\nTextured tris: %d\nVerts: %d\nNorms: %d\nUV's: %d", model.h.numUntex, model.h.numTex, model.h.numVerts, model.h.numNorms, model.h.numUV);
+    printf("\nFirst Face - x: %d  y: %d  z: %d  -  Norm: %d", model.texFaces[0].v[0], model.texFaces[0].v[1], model.texFaces[0].v[2], model.texFaces[0].n);
+    printf("\nSecond Vert - x: %d  y: %d  z: %d", model.vIndex[1].vx, model.vIndex[1].vy, model.vIndex[1].vz);
+    printf("\n%d", model.uvIndex[0].u);
 
     return 0;
 }
@@ -102,7 +110,9 @@ void readObj(const char* filename) {
     while (fgets(buffer, bufferLength, objFile)) {
         switch (buffer[0]) { //Check the first letter of each line
         case 'v': //Looking for vertex-related info
+            printf("v");
             if (buffer[1] == ' ') {
+                printf("vert");
                 setVert(buffer);
             }
             if (buffer[1] == 't') {
@@ -113,9 +123,11 @@ void readObj(const char* filename) {
             }
             break;
         case 'f': //Looking for face info
+            printf("f");
             setFace(buffer);
             break;
         case 'u': //Looking for material info
+            printf("u");
             setCurrentMat(buffer);
         default:
             continue;
@@ -148,8 +160,8 @@ void setMatDiffuse(const char* line) {
     }
     
     materials[indexes[2]].colour.r = (unsigned char)(rgb[0] * 255);
-    materials[indexes[2]].colour.b = (unsigned char)(rgb[1] * 255);
-    materials[indexes[2]].colour.g = (unsigned char)(rgb[2] * 255);
+    materials[indexes[2]].colour.g = (unsigned char)(rgb[1] * 255);
+    materials[indexes[2]].colour.b = (unsigned char)(rgb[2] * 255);
     indexes[2]++;
 }
 
@@ -160,6 +172,7 @@ void setVert(const char* line) {
     int conv[3];
 
     token = strtok(line, delim);
+    printf("\n strtok ok");
 
     for (int i = 0; i < 3; i++) {
         token = strtok(NULL, delim);
@@ -167,7 +180,9 @@ void setVert(const char* line) {
         conv[i] = (int)(verts[i] * fidelity);
     }
 
+    printf("\n for loop ok");
     model.vIndex[indexes[0]] = (VECTOR){ conv[0],conv[1],conv[2] };
+    printf("\n model write ok");
     indexes[0]++;
 }
 
@@ -184,8 +199,8 @@ void setUV(const char* line) {
         raw[i] = atof(token);
         conv[i] = (uint8_t)(raw[i] * 255);
     }
-    model.uvIndex->u = conv[0];
-    model.uvIndex->v = conv[1];
+    model.uvIndex[indexes[3]].u = conv[0];
+    model.uvIndex[indexes[3]].v = conv[1];
     indexes[3]++;
 }
 
@@ -203,7 +218,7 @@ void setNorm(const char* line) {
         conv[i] = (int)(raw[i] * 4098);
     }
     model.nIndex[indexes[1]] = (VECTOR){ conv[0],conv[1],conv[2] };
-    indexes[1];
+    indexes[1]++;
 }
 
 void setFace(const char* line) {
@@ -224,16 +239,17 @@ void setFace(const char* line) {
     infotwo = strtok(NULL, delim);
     infothree = strtok(NULL, delim);
 
-
+    printf("\n%s %s %s", infoone, infotwo, infothree);
 
     token = strtok(infoone, slash);
     raw[0] = atoi(token);
+    token = strtok(NULL, slash);
+    raw[1] = atoi(token);
+    token = strtok(NULL, slash);
+    raw[2] = atoi(token);
 
-    for (int i = 0; i < 2; i++) {
-        token = strtok(NULL, slash);
-        raw[i++] = atoi(token);
-    }
 
+    printf("  %d %d %d", raw[0], raw[1], raw[2]);
     if (raw[1] == 0) {
         isFlat = true;
     }
@@ -253,11 +269,10 @@ void setFace(const char* line) {
 
     token = strtok(infotwo, slash);
     raw[0] = atoi(token);
-
-    for (int i = 0; i < 2; i++) {
-        token = strtok(NULL, slash);
-        raw[i++] = atoi(token);
-    }
+    token = strtok(NULL, slash);
+    raw[1] = atoi(token);
+    token = strtok(NULL, slash);
+    raw[2] = atoi(token);
 
     if (raw[1] == 0) {
         isFlat = true;
@@ -278,11 +293,10 @@ void setFace(const char* line) {
 
     token = strtok(infothree, slash);
     raw[0] = atoi(token);
-
-    for (int i = 0; i < 2; i++) {
-        token = strtok(NULL, slash);
-        raw[i++] = atoi(token);
-    }
+    token = strtok(NULL, slash);
+    raw[1] = atoi(token);
+    token = strtok(NULL, slash);
+    raw[2] = atoi(token);
 
     if (raw[1] == 0) {
         isFlat = true;
@@ -301,9 +315,11 @@ void setFace(const char* line) {
 
     if (isFlat) {
         model.untexFaces[indexes[4]] = untex;
+        indexes[4]++;
     }
     else {
         model.texFaces[indexes[5]] = tex;
+        indexes[5]++;
     }
 }
 
@@ -332,8 +348,33 @@ void setCurrentMat(const char* line) {
 void saveModel(const char* filename) {
     FILE* out = fopen(filename, "wb");
     assembleModel();
+    uint32_t numBytes = sizeof(HEADER)
+        + (indexes[0] * sizeof(VECTOR))
+        + (indexes[1] * sizeof(VECTOR))
+        + (indexes[2] * sizeof(COLVECTOR))
+        + (indexes[3] * sizeof(UV_COORDS))
+        + (indexes[4] * sizeof(FTRI))
+        + (indexes[5] * sizeof(FTTRI));
     if (out != NULL) {
-        fwrite(&model, sizeof(model), 1, out);
+        fwrite(&model.h, sizeof(unsigned char), 11, out);
+        for (int i = 0; i < model.h.numVerts; i++) {
+            fwrite(&model.vIndex[i], sizeof(VECTOR), 1, out);
+        }
+        for (int i = 0; i < model.h.numNorms; i++) {
+            fwrite(&model.nIndex[i], sizeof(VECTOR), 1, out);
+        }
+        for (int i = 0; i < model.h.numMat; i++) {
+            fwrite(&model.matIndex[i], sizeof(COLVECTOR), 1, out);
+        }
+        for (int i = 0; i < model.h.numUV; i++) {
+            fwrite(&model.uvIndex[i], sizeof(UV_COORDS), 1, out);
+        }
+        for (int i = 0; i < model.h.numUntex; i++) {
+            fwrite(&model.untexFaces[i], sizeof(FTRI), 1, out);
+        }
+        for (int i = 0; i < model.h.numTex; i++) {
+            fwrite(&model.texFaces[i], sizeof(FTTRI), 1, out);
+        }
     }
     else {
         printf("Output file error\n");
@@ -343,4 +384,16 @@ void saveModel(const char* filename) {
 
 void assembleModel() {
     model.h = (HEADER){ indexes[4],indexes[5],indexes[0],indexes[1],indexes[3],indexes[2] };
+    for (int i = 0; i < model.h.numMat; i++) {
+        model.matIndex[i] = materials[i].colour;
+    }
+}
+
+void initModel() {
+    model.vIndex = (VECTOR*)malloc(4096 * sizeof(VECTOR));
+    model.nIndex = (VECTOR*)malloc(4096 * sizeof(VECTOR));
+    model.matIndex = (COLVECTOR*)malloc(256 * sizeof(COLVECTOR));
+    model.uvIndex = (UV_COORDS*)malloc(4096 * sizeof(UV_COORDS));
+    model.untexFaces = (FTRI*)malloc(4096 * sizeof(FTRI));
+    model.texFaces = (FTTRI*)malloc(4096 * sizeof(FTTRI));
 }
